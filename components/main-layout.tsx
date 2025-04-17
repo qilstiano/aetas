@@ -73,7 +73,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
               <SheetContent side="left" className="w-[240px] sm:w-[300px]">
                 <div className="flex h-full flex-col">
                   <div className="flex items-center justify-between border-b py-4">
-                    <h2 className="app-title text-lg font-semibold metallic-text">inaros</h2>
+                    <h2 className="app-title text-lg font-semibold metallic-text">aetas</h2>
                     <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
                       <X className="h-5 w-5" />
                     </Button>
@@ -106,7 +106,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
               </SheetContent>
             </Sheet>
             <Link href="/dashboard" className="ml-2 app-title text-lg font-bold metallic-text">
-              inaros
+              aetas
             </Link>
           </div>
           <div className="flex items-center gap-2">
@@ -128,7 +128,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
                 href="/dashboard"
                 className={`app-title text-xl font-bold metallic-text ${sidebarCollapsed ? "hidden" : ""}`}
               >
-                inaros
+                aetas
               </Link>
               <Button
                 variant="ghost"

@@ -72,8 +72,8 @@ export function MetallicGradient() {
 
       gradient.addColorStop(0, `rgba(20, 10, 30, 1)`) // Dark center
       gradient.addColorStop(0.4, `rgba(15, 5, 20, 1)`) // Near-black
-      gradient.addColorStop(0.8, `rgba(40, 0, ${60 + Math.sin(time) * 20}, ${purpleIntensity})`) // Animated purple
-      gradient.addColorStop(1, `rgba(10, 5, 15, 1)`) // Dark edge
+      gradient.addColorStop(0.8, `rgba(13, 0, ${60 + Math.sin(time) * 20}, ${purpleIntensity})`) // Animated purple
+      gradient.addColorStop(1, `rgb(26, 4, 48)`) // Dark edge
 
       // Fill background with gradient
       ctx.fillStyle = gradient

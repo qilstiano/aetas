@@ -37,7 +37,7 @@ export default function LoginPage() {
 
       toast({
         title: "Login successful",
-        description: "Welcome back to inaros!",
+        description: "Welcome back to aetas!",
       })
 
       router.push("/dashboard")
@@ -58,7 +58,7 @@ export default function LoginPage() {
       <MetallicGradient />
       <Card className="w-full max-w-md bg-background/80 backdrop-blur-sm">
         <CardHeader className="space-y-1">
-          <CardTitle className="app-title text-3xl font-bold tracking-tight metallic-text">inaros</CardTitle>
+          <CardTitle className="app-title text-3xl font-bold tracking-tight metallic-text">aetas</CardTitle>
           <CardDescription>Enter your email and password to sign in to your account</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>

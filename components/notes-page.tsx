@@ -129,26 +129,53 @@ export function NotesPage({ user }: NotesPageProps) {
   }, [user.id, supabase, toast])
 
   const handleCreateNote = async (note: { title: string; content: string; moduleId: string | null }) => {
+    // Create temporary ID for optimistic update
+      const tempId = `temp-${Date.now()}`
+    
     try {
-      // Ensure title is not undefined and not empty after trimming
-      const trimmedTitle = note.title?.trim() || ""
-
-      const { error } = await supabase.from("notes").insert({
-        user_id: user.id,
-        title: trimmedTitle,
+      
+      
+      // Optimistically add to local state
+      const newNote: Note = {
+        id: tempId,
+        title: note.title?.trim() || "",
         content: note.content || "",
-        module_id: note.moduleId,
-      })
-
+        moduleId: note.moduleId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      
+      setNotes(prev => [newNote, ...prev])
+      setSelectedNote(newNote)
+  
+      // Now make the actual Supabase call
+      const { data, error } = await supabase
+        .from("notes")
+        .insert({
+          user_id: user.id,
+          title: note.title?.trim() || "",
+          content: note.content || "",
+          module_id: note.moduleId,
+        })
+        .select() // Important: get the inserted record back
+  
       if (error) throw error
-
+  
+      // Replace the temporary note with the real one from Supabase
+      setNotes(prev => prev.map(n => n.id === tempId ? {
+        ...n,
+        id: data[0].id,
+        createdAt: parseISO(data[0].created_at),
+        updatedAt: parseISO(data[0].updated_at),
+      } : n))
+  
       toast({
         title: "Note created",
         description: "Your note has been created successfully.",
       })
-
-      setSelectedNote(null)
     } catch (error) {
+      // Roll back optimistic update on error
+      setNotes(prev => prev.filter(n => n.id !== tempId))
       console.error("Error creating note:", error)
       toast({
         title: "Error",
@@ -536,7 +563,11 @@ export function NotesPage({ user }: NotesPageProps) {
             <NoteEditor
               note={selectedNote.id === "new" ? null : selectedNote}
               modules={modules}
-              onSave={selectedNote.id === "new" ? handleCreateNote : handleUpdateNote}
+              onSave={(noteId, note) =>
+                selectedNote.id === "new"
+                  ? handleCreateNote(note)
+                  : handleUpdateNote(noteId, note)
+              }
               onDelete={handleDeleteNote}
               onCancel={() => setSelectedNote(null)}
             />
