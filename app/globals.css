@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 267 100% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 267 30% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 267 30% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 267 100% 60%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+.font-ibm-plex-mono {
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.app-title {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+}
+
+/* Metallic text effect */
+.metallic-text {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(200, 200, 200, 0.8) 50%,
+    rgba(150, 150, 150, 0.8) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 10px rgba(150, 100, 255, 0.3);
+}
+
+/* Calendar styles */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.calendar-day {
+  aspect-ratio: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  padding: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.calendar-day-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.calendar-day-events {
+  width: 100%;
+  overflow: hidden;
+  flex-grow: 1;
+}
+
+.calendar-event {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* Markdown editor styles */
+.markdown-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.markdown-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown-content {
+  flex-grow: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.markdown-input {
+  width: 50%;
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 1rem;
+  font-family: "IBM Plex Mono", monospace;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.markdown-preview {
+  width: 50%;
+  padding: 1rem;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+}
+
+.markdown-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-preview pre {
+  background-color: var(--muted);
+  padding: 1rem;
+  border-radius: 0.25rem;
+  overflow-x: auto;
+}
+
+.markdown-preview code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.875rem;
+}
