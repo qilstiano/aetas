@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { format, isAfter } from "date-fns"
-import { ChevronDown, Edit, Plus } from "lucide-react"
+import { ChevronDown, Edit, MoreHorizontal, Plus, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -14,9 +14,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import type { Event, Module } from "@/types/calendar"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/components/ui/use-toast"
@@ -31,13 +41,15 @@ interface ModuleOverviewProps {
 
 export function ModuleOverview({ modules, events, onEventClick, userId }: ModuleOverviewProps) {
   const { toast } = useToast()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [newModuleName, setNewModuleName] = useState("")
   const [newModuleCode, setNewModuleCode] = useState("")
   const [editModuleId, setEditModuleId] = useState<string | null>(null)
   const [editModuleName, setEditModuleName] = useState("")
   const [editModuleCode, setEditModuleCode] = useState("")
+  const [deleteModuleId, setDeleteModuleId] = useState<string | null>(null)
   const [localModules, setLocalModules] = useState<Module[]>([])
   const supabase = createClient()
 
@@ -83,6 +95,17 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
     if (!newModuleName || !newModuleCode) return
 
     try {
+      // Optimistic UI update
+      const tempId = `temp-${Date.now()}`
+      const newModule: Module = {
+        id: tempId,
+        name: newModuleName,
+        code: newModuleCode,
+        color: "#3b82f6",
+      }
+
+      setLocalModules((prev) => [...prev, newModule])
+
       const { data, error } = await supabase
         .from("modules")
         .insert({
@@ -95,20 +118,9 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
 
       if (error) throw error
 
-      // Optimistic update
-      if (data && data[0]) {
-        const newModule: Module = {
-          id: data[0].id,
-          name: data[0].name,
-          code: data[0].code,
-          color: data[0].color || "#3b82f6",
-        }
-        setLocalModules([...localModules, newModule])
-      }
-
       setNewModuleName("")
       setNewModuleCode("")
-      setIsDialogOpen(false)
+      setIsAddDialogOpen(false)
 
       toast({
         title: "Module added",
@@ -121,6 +133,9 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
         description: "There was an error adding your module.",
         variant: "destructive",
       })
+
+      // Revert optimistic update
+      fetchModules()
     }
   }
 
@@ -128,6 +143,13 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
     if (!editModuleId || !editModuleName || !editModuleCode) return
 
     try {
+      // Optimistic UI update
+      setLocalModules((prev) =>
+        prev.map((module) =>
+          module.id === editModuleId ? { ...module, name: editModuleName, code: editModuleCode } : module,
+        ),
+      )
+
       const { error } = await supabase
         .from("modules")
         .update({
@@ -138,22 +160,7 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
 
       if (error) throw error
 
-      // Optimistic update
-      const updatedModules = localModules.map((module) =>
-        module.id === editModuleId
-          ? {
-              ...module,
-              name: editModuleName,
-              code: editModuleCode,
-            }
-          : module,
-      )
-      setLocalModules(updatedModules)
-
       setIsEditDialogOpen(false)
-      setEditModuleId(null)
-      setEditModuleName("")
-      setEditModuleCode("")
 
       toast({
         title: "Module updated",
@@ -166,18 +173,24 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
         description: "There was an error updating your module.",
         variant: "destructive",
       })
+
+      // Revert optimistic update
+      fetchModules()
     }
   }
 
-  const handleDeleteModule = async (moduleId: string) => {
+  const handleDeleteModule = async () => {
+    if (!deleteModuleId) return
+
     try {
-      const { error } = await supabase.from("modules").delete().eq("id", moduleId)
+      // Optimistic UI update
+      setLocalModules((prev) => prev.filter((module) => module.id !== deleteModuleId))
+
+      const { error } = await supabase.from("modules").delete().eq("id", deleteModuleId)
 
       if (error) throw error
 
-      // Optimistic update
-      const updatedModules = localModules.filter((module) => module.id !== moduleId)
-      setLocalModules(updatedModules)
+      setIsDeleteDialogOpen(false)
 
       toast({
         title: "Module deleted",
@@ -190,6 +203,9 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
         description: "There was an error deleting your module.",
         variant: "destructive",
       })
+
+      // Revert optimistic update
+      fetchModules()
     }
   }
 
@@ -200,12 +216,17 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
     setIsEditDialogOpen(true)
   }
 
+  const openDeleteDialog = (moduleId: string) => {
+    setDeleteModuleId(moduleId)
+    setIsDeleteDialogOpen(true)
+  }
+
   return (
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle>Modules</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => setIsDialogOpen(true)}>
+          <Button size="sm" variant="outline" onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="mr-1 h-4 w-4" />
             Add
           </Button>
@@ -234,17 +255,22 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit module</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(module)}>Edit</DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteModule(module.id)}
-                            >
+                            <DropdownMenuItem onClick={() => openEditDialog(module)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDeleteDialog(module.id)} className="text-destructive">
+                              <Trash className="mr-2 h-4 w-4" />
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -283,7 +309,7 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
       </Card>
 
       {/* Add Module Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Module</DialogTitle>
@@ -310,7 +336,7 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
             <Button onClick={handleAddModule}>Add Module</Button>
@@ -323,26 +349,16 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Module</DialogTitle>
-            <DialogDescription>Update your module details</DialogDescription>
+            <DialogDescription>Update module details</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="editModuleName">Module Name</Label>
-              <Input
-                id="editModuleName"
-                placeholder="e.g. Introduction to Computer Science"
-                value={editModuleName}
-                onChange={(e) => setEditModuleName(e.target.value)}
-              />
+              <Input id="editModuleName" value={editModuleName} onChange={(e) => setEditModuleName(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="editModuleCode">Module Code</Label>
-              <Input
-                id="editModuleCode"
-                placeholder="e.g. CS101"
-                value={editModuleCode}
-                onChange={(e) => setEditModuleCode(e.target.value)}
-              />
+              <Input id="editModuleCode" value={editModuleCode} onChange={(e) => setEditModuleCode(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -353,6 +369,24 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Module Confirmation */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete the module and remove its association from all events. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteModule} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

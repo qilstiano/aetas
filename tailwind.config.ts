@@ -68,10 +68,25 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "pulse-slow": {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.2" },
+          "50%": { transform: "scale(1.1)", opacity: "0.4" },
+        },
+        "pulse-medium": {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.3" },
+          "50%": { transform: "scale(1.15)", opacity: "0.5" },
+        },
+        "pulse-fast": {
+          "0%, 100%": { transform: "scale(1)", opacity: "0.4" },
+          "50%": { transform: "scale(1.2)", opacity: "0.6" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-slow": "pulse-slow 4s ease-in-out infinite",
+        "pulse-medium": "pulse-medium 3s ease-in-out infinite",
+        "pulse-fast": "pulse-fast 2s ease-in-out infinite",
       },
       typography: {
         DEFAULT: {

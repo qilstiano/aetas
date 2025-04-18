@@ -2,15 +2,14 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { BookText, Calendar, ChevronLeft, ChevronRight, Home, LogOut, Menu, X } from "lucide-react"
+import { Calendar, ChevronLeft, ChevronRight, Home, LogOut, NotebookPen } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
 import { MetallicGradient } from "@/components/metallic-gradient"
-import { useToast } from "@/components/ui/use-toast"
+import { LoadingScreen } from "@/components/loading-screen"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -22,167 +21,118 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, user }: MainLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
   const pathname = usePathname()
   const router = useRouter()
-  const { toast } = useToast()
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const supabase = createClient()
 
+  useEffect(() => {
+    // Simulate loading for a short time to ensure components are ready
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+
+    // Safety timeout to prevent infinite loading
+    const safetyTimer = setTimeout(() => {
+      setIsLoading(false)
+    }, 3000) // Force hide after 3 seconds
+
+    return () => {
+      clearTimeout(timer)
+      clearTimeout(safetyTimer)
+    }
+  }, [])
+
   const handleSignOut = async () => {
+    setIsLoading(true)
     try {
       await supabase.auth.signOut()
       router.push("/login")
-      router.refresh()
     } catch (error) {
-      toast({
-        title: "Error signing out",
-        description: "Please try again",
-        variant: "destructive",
-      })
+      console.error("Error signing out:", error)
+      setIsLoading(false)
     }
-  }
-
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Calendar", href: "/calendar", icon: Calendar },
-    { name: "Notes", href: "/notes", icon: BookText },
-  ]
-
-  const isActive = (path: string) => {
-    if (path === pathname) return true
-    if (path !== "/dashboard" && pathname.startsWith(path)) return true
-    return false
   }
 
   return (
     <div className="flex min-h-screen flex-col">
+      <LoadingScreen isLoading={isLoading} />
       <MetallicGradient />
 
-      {/* Mobile header */}
-      <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur-sm md:hidden">
-        <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center">
-            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
-                  <span className="sr-only">Toggle menu</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[240px] sm:w-[300px]">
-                <div className="flex h-full flex-col">
-                  <div className="flex items-center justify-between border-b py-4">
-                    <h2 className="app-title text-lg font-semibold metallic-text">aetas</h2>
-                    <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
-                  <nav className="flex-1 overflow-auto py-4">
-                    <ul className="space-y-2 px-2">
-                      {navigation.map((item) => (
-                        <li key={item.name}>
-                          <Link
-                            href={item.href}
-                            className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                              isActive(item.href) ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                            }`}
-                            onClick={() => setIsMenuOpen(false)}
-                          >
-                            <item.icon className="mr-2 h-4 w-4" />
-                            {item.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
-                  <div className="border-t p-4">
-                    <Button variant="outline" className="w-full justify-start" onClick={handleSignOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
-                    </Button>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-            <Link href="/dashboard" className="ml-2 app-title text-lg font-bold metallic-text">
-              aetas
+      <div className="flex flex-1">
+        {/* Sidebar */}
+        <div
+          className={`fixed inset-y-0 z-50 flex w-64 flex-col border-r bg-background/80 backdrop-blur-md transition-transform duration-300 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } md:relative md:translate-x-0`}
+        >
+          <div className="flex h-16 items-center border-b px-6">
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <span className="font-ibm-plex-mono text-xl font-bold tracking-tight">aetas</span>
             </Link>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">{user.full_name || user.email}</span>
-          </div>
-        </div>
-      </header>
 
-      {/* Desktop layout */}
-      <div className="hidden md:flex md:flex-1">
-        <aside
-          className={`fixed inset-y-0 left-0 ${
-            sidebarCollapsed ? "w-16" : "w-64"
-          } border-r bg-background/80 backdrop-blur-sm transition-all duration-300`}
-        >
-          <div className="flex h-full flex-col">
-            <div className="flex h-14 items-center border-b px-4 justify-between">
+          <div className="flex-1 overflow-auto py-4">
+            <nav className="grid gap-1 px-2">
               <Link
                 href="/dashboard"
-                className={`app-title text-xl font-bold metallic-text ${sidebarCollapsed ? "hidden" : ""}`}
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
+                  pathname === "/dashboard" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                }`}
               >
-                aetas
+                <Home className="h-4 w-4" />
+                Dashboard
               </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="flex-shrink-0"
+              <Link
+                href="/calendar"
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
+                  pathname === "/calendar" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                }`}
               >
-                {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-              </Button>
-            </div>
-            <nav className="flex-1 overflow-auto p-4">
-              <ul className="space-y-2">
-                {navigation.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive(item.href) ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                      }`}
-                      title={sidebarCollapsed ? item.name : ""}
-                    >
-                      <item.icon className={`${sidebarCollapsed ? "mx-auto" : "mr-2"} h-4 w-4`} />
-                      {!sidebarCollapsed && <span>{item.name}</span>}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+                <Calendar className="h-4 w-4" />
+                Calendar
+              </Link>
+              <Link
+                href="/notes"
+                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
+                  pathname === "/notes" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                }`}
+              >
+                <NotebookPen className="h-4 w-4" />
+                Notes
+              </Link>
             </nav>
-            <div className={`border-t p-4 ${sidebarCollapsed ? "flex justify-center" : ""}`}>
-              {!sidebarCollapsed && (
-                <div className="mb-4 flex items-center">
-                  <div className="ml-2">
-                    <p className="text-sm font-medium">{user.full_name || "User"}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                  </div>
-                </div>
-              )}
-              <Button
-                variant="outline"
-                className={`${sidebarCollapsed ? "p-2" : "w-full justify-start"}`}
-                onClick={handleSignOut}
-                title={sidebarCollapsed ? "Sign out" : ""}
-              >
-                <LogOut className={`${sidebarCollapsed ? "h-4 w-4" : "mr-2 h-4 w-4"}`} />
-                {!sidebarCollapsed && <span>Sign out</span>}
-              </Button>
-            </div>
           </div>
-        </aside>
-        <main className={`${sidebarCollapsed ? "ml-16" : "ml-64"} flex-1 transition-all duration-300`}>{children}</main>
-      </div>
 
-      {/* Mobile content */}
-      <main className="flex-1 md:hidden">{children}</main>
+          <div className="border-t p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-primary/10 text-center leading-8">
+                {user.full_name ? user.full_name[0] : user.email[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{user.full_name || user.email}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" className="w-full" onClick={handleSignOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
+        </div>
+
+        {/* Toggle sidebar button */}
+        <button
+          className="fixed bottom-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg md:hidden"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
+          {sidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+        </button>
+
+        {/* Main content */}
+        <div className="flex-1">{children}</div>
+      </div>
     </div>
   )
 }

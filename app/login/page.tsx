@@ -37,7 +37,7 @@ export default function LoginPage() {
 
       toast({
         title: "Login successful",
-        description: "Welcome back to aetas!",
+        description: "Welcome back to inaros!",
       })
 
       router.push("/dashboard")

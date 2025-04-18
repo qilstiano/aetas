@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "aetas",
   description: "A personal calendar application for students and young professionals",
   icons: {
-    icon: "/icons8-circled-a-50.png",
+    icon: "https://img.icons8.com/?size=100&id=YiJEuvoVyc0A&format=png&color=000000",
   },
     generator: 'v0.dev'
 }
@@ -36,6 +36,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-import './globals.css'

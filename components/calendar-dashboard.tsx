@@ -1,7 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { format, startOfToday, startOfWeek, isSameDay } from "date-fns"
+import { useState, useEffect, useMemo } from "react"
+import {
+  format,
+  startOfToday,
+  startOfWeek,
+  isSameDay,
+  addDays,
+  addWeeks,
+  addMonths,
+  addYears,
+  parseISO,
+} from "date-fns"
 import { CalendarDays, ListTodo, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
@@ -34,6 +44,97 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const supabase = createClient()
 
+  // Function to generate recurring event instances
+  const generateRecurringEventInstances = (event: Event, startDate: Date, endDate: Date): Event[] => {
+    if (!event.recurrence) return [event]
+
+    const instances: Event[] = []
+    const { frequency, interval, endDate: recurrenceEndDate, count, daysOfWeek } = event.recurrence
+
+    let currentDate = new Date(event.start)
+    let instanceCount = 0
+
+    // Calculate time difference between start and end for maintaining duration
+    const duration = event.end.getTime() - event.start.getTime()
+
+    while (
+      (!recurrenceEndDate || currentDate <= recurrenceEndDate) &&
+      (!count || instanceCount < count) &&
+      currentDate <= endDate
+    ) {
+      // For weekly recurrence, check if the day of week matches
+      if (frequency === "weekly" && daysOfWeek && daysOfWeek.length > 0) {
+        const dayOfWeek = currentDate.getDay()
+        if (daysOfWeek.includes(dayOfWeek) && currentDate >= startDate) {
+          const instanceStart = new Date(currentDate)
+          const instanceEnd = new Date(instanceStart.getTime() + duration)
+
+          instances.push({
+            ...event,
+            id: `${event.id}_${instanceCount}`,
+            start: instanceStart,
+            end: instanceEnd,
+            isRecurringInstance: true,
+          })
+        }
+
+        // Move to next day
+        currentDate = addDays(currentDate, 1)
+      } else {
+        // For other frequencies
+        if (currentDate >= startDate) {
+          const instanceStart = new Date(currentDate)
+          const instanceEnd = new Date(instanceStart.getTime() + duration)
+
+          instances.push({
+            ...event,
+            id: `${event.id}_${instanceCount}`,
+            start: instanceStart,
+            end: instanceEnd,
+            isRecurringInstance: true,
+          })
+
+          instanceCount++
+        }
+
+        // Move to next occurrence based on frequency
+        switch (frequency) {
+          case "daily":
+            currentDate = addDays(currentDate, interval)
+            break
+          case "weekly":
+            currentDate = addWeeks(currentDate, interval)
+            break
+          case "monthly":
+            currentDate = addMonths(currentDate, interval)
+            break
+          case "yearly":
+            currentDate = addYears(currentDate, interval)
+            break
+        }
+      }
+    }
+
+    return instances
+  }
+
+  // Calculate expanded events including recurring instances
+  const expandedEvents = useMemo(() => {
+    const result: Event[] = []
+    const viewEndDate = addMonths(selectedDate, 3) // Look ahead 3 months
+
+    events.forEach((event) => {
+      if (event.recurrence) {
+        const instances = generateRecurringEventInstances(event, startOfToday(), viewEndDate)
+        result.push(...instances)
+      } else {
+        result.push(event)
+      }
+    })
+
+    return result
+  }, [events, selectedDate])
+
   useEffect(() => {
     // Fetch events
     const fetchEvents = async () => {
@@ -50,14 +151,16 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
           id: event.id,
           title: event.title,
           description: event.description || "",
-          start: new Date(event.start_time),
-          end: new Date(event.end_time),
+          start: parseISO(event.start_time),
+          end: parseISO(event.end_time),
           category: event.category,
           moduleId: event.module_id,
           links: (event.links as string[]) || [],
           notes: event.notes || "",
           reminders: (event.reminders as string[]) || [],
           completed: event.completed,
+          priority: event.priority || "medium",
+          recurrence: event.recurrence as any,
         }))
 
         setEvents(formattedEvents)
@@ -128,14 +231,36 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
       )
       .subscribe()
 
+    // Set up real-time subscription for notes
+    const notesSubscription = supabase
+      .channel("notes-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "notes", filter: `user_id=eq.${user.id}` }, () => {
+        // We don't need to fetch notes here, but we'll keep the subscription for consistency
+        console.log("Notes changed")
+      })
+      .subscribe()
+
     return () => {
       eventsSubscription.unsubscribe()
       modulesSubscription.unsubscribe()
+      notesSubscription.unsubscribe()
     }
   }, [user.id, supabase, toast])
 
   const handleAddEvent = async (eventData: Omit<Event, "id">) => {
     try {
+      // Create a temporary ID for optimistic UI update
+      const tempId = `temp-${Date.now()}`
+
+      // Add the event to the local state immediately (optimistic update)
+      const newEvent: Event = {
+        id: tempId,
+        ...eventData,
+      }
+
+      setEvents((prev) => [...prev, newEvent])
+
+      // Prepare data for Supabase
       const { error } = await supabase.from("events").insert({
         user_id: user.id,
         title: eventData.title,
@@ -148,6 +273,8 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
         notes: eventData.notes,
         reminders: eventData.reminders,
         completed: eventData.completed,
+        priority: eventData.priority,
+        recurrence: eventData.recurrence,
       })
 
       if (error) throw error
@@ -163,33 +290,71 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
         description: "There was an error adding your event.",
         variant: "destructive",
       })
+
+      // Revert optimistic update on error
+      setEvents((prev) => prev.filter((event) => !event.id.startsWith("temp-")))
     }
   }
 
   const handleUpdateEvent = async (eventId: string, eventData: Partial<Event>) => {
     try {
-      const updateData: any = { ...eventData }
+      // Optimistic update
+      setEvents((prev) => prev.map((event) => (event.id === eventId ? { ...event, ...eventData } : event)))
 
-      // Convert Date objects to ISO strings
-      if (eventData.start) {
-        updateData.start_time = eventData.start.toISOString()
-        delete updateData.start
+      // Check if this is a recurring instance
+      if (eventId.includes("_")) {
+        // This is a recurring instance, ask user if they want to update all instances or just this one
+        const originalEventId = eventId.split("_")[0]
+
+        // For now, we'll just update the original event
+        // In a real app, you'd show a dialog asking the user what they want to do
+
+        const updateData: any = { ...eventData }
+
+        // Convert Date objects to ISO strings
+        if (eventData.start) {
+          updateData.start_time = eventData.start.toISOString()
+          delete updateData.start
+        }
+
+        if (eventData.end) {
+          updateData.end_time = eventData.end.toISOString()
+          delete updateData.end
+        }
+
+        // Rename moduleId to module_id
+        if ("moduleId" in updateData) {
+          updateData.module_id = updateData.moduleId
+          delete updateData.moduleId
+        }
+
+        const { error } = await supabase.from("events").update(updateData).eq("id", originalEventId)
+
+        if (error) throw error
+      } else {
+        const updateData: any = { ...eventData }
+
+        // Convert Date objects to ISO strings
+        if (eventData.start) {
+          updateData.start_time = eventData.start.toISOString()
+          delete updateData.start
+        }
+
+        if (eventData.end) {
+          updateData.end_time = eventData.end.toISOString()
+          delete updateData.end
+        }
+
+        // Rename moduleId to module_id
+        if ("moduleId" in updateData) {
+          updateData.module_id = updateData.moduleId
+          delete updateData.moduleId
+        }
+
+        const { error } = await supabase.from("events").update(updateData).eq("id", eventId)
+
+        if (error) throw error
       }
-
-      if (eventData.end) {
-        updateData.end_time = eventData.end.toISOString()
-        delete updateData.end
-      }
-
-      // Rename moduleId to module_id
-      if ("moduleId" in updateData) {
-        updateData.module_id = updateData.moduleId
-        delete updateData.moduleId
-      }
-
-      const { error } = await supabase.from("events").update(updateData).eq("id", eventId)
-
-      if (error) throw error
 
       toast({
         title: "Event updated",
@@ -207,9 +372,24 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      const { error } = await supabase.from("events").delete().eq("id", eventId)
+      // Optimistic UI update
+      setEvents((prev) => prev.filter((event) => event.id !== eventId))
 
-      if (error) throw error
+      // Check if this is a recurring instance
+      if (eventId.includes("_")) {
+        // This is a recurring instance, ask user if they want to delete all instances or just this one
+        const originalEventId = eventId.split("_")[0]
+
+        // For now, we'll just delete the original event
+        // In a real app, you'd show a dialog asking the user what they want to do
+        const { error } = await supabase.from("events").delete().eq("id", originalEventId)
+
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from("events").delete().eq("id", eventId)
+
+        if (error) throw error
+      }
 
       toast({
         title: "Event deleted",
@@ -226,7 +406,16 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
   }
 
   const handleToggleComplete = async (eventId: string, completed: boolean) => {
-    await handleUpdateEvent(eventId, { completed })
+    // Check if this is a recurring instance
+    if (eventId.includes("_")) {
+      // This is a recurring instance, we'll just update the UI state
+      // In a real app, you might want to store completed instances separately
+      const updatedEvents = expandedEvents.map((event) => (event.id === eventId ? { ...event, completed } : event))
+      // This is just for UI, the actual data isn't persisted for recurring instances
+      setEvents(updatedEvents.filter((e) => !e.isRecurringInstance))
+    } else {
+      await handleUpdateEvent(eventId, { completed })
+    }
   }
 
   const handleEditEvent = (event: Event) => {
@@ -239,7 +428,7 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
     setIsDialogOpen(true)
   }
 
-  const filteredEvents = events.filter((event) => {
+  const filteredEvents = expandedEvents.filter((event) => {
     if (view === "calendar") {
       return isSameDay(event.start, selectedDate)
     } else {
@@ -300,7 +489,7 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
               />
             ) : (
               <ListView
-                events={events}
+                events={expandedEvents}
                 onEventClick={handleEditEvent}
                 onToggleComplete={handleToggleComplete}
                 modules={modules}
@@ -310,7 +499,7 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
           </div>
 
           <div>
-            <ModuleOverview modules={modules} events={events} onEventClick={handleEditEvent} userId={user.id} />
+            <ModuleOverview modules={modules} events={expandedEvents} onEventClick={handleEditEvent} userId={user.id} />
           </div>
         </div>
       </div>

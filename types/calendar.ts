@@ -11,8 +11,6 @@ export interface Event {
   reminders: string[]
   completed: boolean
   priority?: "low" | "medium" | "high"
-  importance?: "low" | "medium" | "high"
-  urgency?: "low" | "medium" | "high"
   recurrence?: {
     frequency: "daily" | "weekly" | "monthly" | "yearly"
     interval: number

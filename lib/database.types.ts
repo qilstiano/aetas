@@ -18,8 +18,6 @@ export interface Database {
           reminders: Json | null
           completed: boolean
           priority: "low" | "medium" | "high" | null
-          importance: "low" | "medium" | "high" | null
-          urgency: "low" | "medium" | "high" | null
           recurrence: Json | null
           created_at: string
           updated_at: string
@@ -38,8 +36,6 @@ export interface Database {
           reminders?: Json | null
           completed?: boolean
           priority?: "low" | "medium" | "high" | null
-          importance?: "low" | "medium" | "high" | null
-          urgency?: "low" | "medium" | "high" | null
           recurrence?: Json | null
           created_at?: string
           updated_at?: string
@@ -58,8 +54,6 @@ export interface Database {
           reminders?: Json | null
           completed?: boolean
           priority?: "low" | "medium" | "high" | null
-          importance?: "low" | "medium" | "high" | null
-          urgency?: "low" | "medium" | "high" | null
           recurrence?: Json | null
           created_at?: string
           updated_at?: string

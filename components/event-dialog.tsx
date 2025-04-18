@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, addMonths } from "date-fns"
+import { format, addMonths, addMinutes } from "date-fns"
 import { AlertCircle, Plus, Repeat, Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -51,8 +51,6 @@ export function EventDialog({
   const [completed, setCompleted] = useState(false)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
-  const [importance, setImportance] = useState<"low" | "medium" | "high">("medium")
-  const [urgency, setUrgency] = useState<"low" | "medium" | "high">("medium")
 
   // Recurrence state
   const [isRecurring, setIsRecurring] = useState(false)
@@ -63,7 +61,7 @@ export function EventDialog({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date>(addMonths(new Date(), 3))
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([])
   const [dayOfMonth, setDayOfMonth] = useState(1)
-  const [activeTab, setActiveTab] = useState<"details" | "recurrence" | "priority">("details")
+  const [activeTab, setActiveTab] = useState<"details" | "recurrence">("details")
 
   useEffect(() => {
     if (event) {
@@ -79,8 +77,6 @@ export function EventDialog({
       setReminders(event.reminders || [])
       setCompleted(event.completed || false)
       setPriority(event.priority || "medium")
-      setImportance(event.importance || "medium")
-      setUrgency(event.urgency || "medium")
 
       // Set recurrence
       if (event.recurrence) {
@@ -128,8 +124,6 @@ export function EventDialog({
       setReminders([])
       setCompleted(false)
       setPriority("medium")
-      setImportance("medium")
-      setUrgency("medium")
       setIsRecurring(false)
       setRecurrenceFrequency("weekly")
       setRecurrenceInterval(1)
@@ -142,6 +136,27 @@ export function EventDialog({
 
     setActiveTab("details")
   }, [event, isOpen, initialDate])
+
+  // Handle start time change and adjust end time if needed
+  const handleStartTimeChange = (newStartTime: string) => {
+    setStartTime(newStartTime)
+
+    // Parse times to compare them
+    const [startHours, startMinutes] = newStartTime.split(":").map(Number)
+    const [endHours, endMinutes] = endTime.split(":").map(Number)
+
+    const startDate = new Date()
+    startDate.setHours(startHours, startMinutes, 0, 0)
+
+    const endDate = new Date()
+    endDate.setHours(endHours, endMinutes, 0, 0)
+
+    // If end time is before or equal to start time, set end time to start time + 1 hour
+    if (endDate <= startDate) {
+      const newEndDate = addMinutes(startDate, 60)
+      setEndTime(format(newEndDate, "HH:mm"))
+    }
+  }
 
   const handleAddLink = () => {
     if (newLink && !links.includes(newLink)) {
@@ -192,8 +207,6 @@ export function EventDialog({
       reminders,
       completed,
       priority,
-      importance,
-      urgency,
       recurrence,
     }
 
@@ -232,9 +245,8 @@ export function EventDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="priority">Priority</TabsTrigger>
             <TabsTrigger value="recurrence">Recurrence</TabsTrigger>
           </TabsList>
 
@@ -273,7 +285,7 @@ export function EventDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="module">Module (Optional)</Label>
-                <Select value={moduleId || "none"} onValueChange={setModuleId} disabled={category !== "school"}>
+                <Select value={moduleId || ""} onValueChange={setModuleId} disabled={category !== "school"}>
                   <SelectTrigger id="module">
                     <SelectValue placeholder="Select module" />
                   </SelectTrigger>
@@ -287,6 +299,31 @@ export function EventDialog({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <RadioGroup
+                value={priority}
+                onValueChange={(value) => setPriority(value as "low" | "medium" | "high")}
+                className="flex space-x-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="low" id="priority-low" />
+                  <Label htmlFor="priority-low">Low</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="medium" id="priority-medium" />
+                  <Label htmlFor="priority-medium">Medium</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="high" id="priority-high" />
+                  <Label htmlFor="priority-high" className="flex items-center">
+                    High
+                    <AlertCircle className="ml-1 h-4 w-4 text-destructive" />
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
 
             <div className="space-y-2">
@@ -306,7 +343,12 @@ export function EventDialog({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startTime">Start Time</Label>
-                <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                <Input
+                  id="startTime"
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
+                />
               </div>
 
               <div className="space-y-2">
@@ -378,97 +420,6 @@ export function EventDialog({
                 <Repeat className="mr-2 h-4 w-4" />
                 Recurring event
               </Label>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="priority" className="space-y-6 py-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <RadioGroup
-                  value={priority}
-                  onValueChange={(value) => setPriority(value as "low" | "medium" | "high")}
-                  className="flex space-x-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="low" id="priority-low" />
-                    <Label htmlFor="priority-low">Low</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="medium" id="priority-medium" />
-                    <Label htmlFor="priority-medium">Medium</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="high" id="priority-high" />
-                    <Label htmlFor="priority-high" className="flex items-center">
-                      High
-                      <AlertCircle className="ml-1 h-4 w-4 text-destructive" />
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Importance</Label>
-                <RadioGroup
-                  value={importance}
-                  onValueChange={(value) => setImportance(value as "low" | "medium" | "high")}
-                  className="flex space-x-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="low" id="importance-low" />
-                    <Label htmlFor="importance-low">Low</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="medium" id="importance-medium" />
-                    <Label htmlFor="importance-medium">Medium</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="high" id="importance-high" />
-                    <Label htmlFor="importance-high">High</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Urgency</Label>
-                <RadioGroup
-                  value={urgency}
-                  onValueChange={(value) => setUrgency(value as "low" | "medium" | "high")}
-                  className="flex space-x-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="low" id="urgency-low" />
-                    <Label htmlFor="urgency-low">Low</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="medium" id="urgency-medium" />
-                    <Label htmlFor="urgency-medium">Medium</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="high" id="urgency-high" />
-                    <Label htmlFor="urgency-high">High</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-
-            <div className="rounded-md bg-muted p-4">
-              <h3 className="mb-2 font-medium">Priority Matrix</h3>
-              <p className="text-sm text-muted-foreground">
-                Use these settings to help prioritize your tasks effectively:
-              </p>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                <li>
-                  • <strong>Priority</strong>: Overall importance of the task
-                </li>
-                <li>
-                  • <strong>Importance</strong>: How significant the task is to your goals
-                </li>
-                <li>
-                  • <strong>Urgency</strong>: How soon the task needs to be completed
-                </li>
-              </ul>
             </div>
           </TabsContent>
 

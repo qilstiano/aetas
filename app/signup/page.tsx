@@ -66,7 +66,7 @@ export default function SignupPage() {
 
         toast({
           title: "Account created",
-          description: "Welcome to aetas! Your account has been created successfully.",
+          description: "Welcome to inaros! Your account has been created successfully.",
         })
 
         router.push("/dashboard")
