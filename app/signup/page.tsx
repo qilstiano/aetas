@@ -66,7 +66,7 @@ export default function SignupPage() {
 
         toast({
           title: "Account created",
-          description: "Welcome to aetos! Your account has been created successfully.",
+          description: "Welcome to inaros! Your account has been created successfully.",
         })
 
         router.push("/dashboard")
@@ -95,7 +95,7 @@ export default function SignupPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="John Tan" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -141,7 +141,7 @@ export default function SignupPage() {
               <Input
                 id="confirmPassword"
                 type={showPassword ? "text" : "password"}
-                placeholder="super secret password!"
+                placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
