@@ -59,7 +59,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
     <div className="flex min-h-screen flex-col">
       <LoadingScreen isLoading={isLoading} />
       <MetallicGradient />
-
+      
       <div className="flex flex-1">
         {/* Sidebar */}
         <div

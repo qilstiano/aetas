@@ -224,13 +224,17 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle>Modules</CardTitle>
-          <Button size="sm" variant="outline" onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="mr-1 h-4 w-4" />
-            Add
-          </Button>
-        </CardHeader>
+      <CardHeader className="flex flex-col xl:flex-row sm:items-center sm:justify-between space-y-3 xl:space-y-0 pb-2">
+        <CardTitle>Modules</CardTitle>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setIsAddDialogOpen(true)}
+        >
+          <Plus className="mr-1 h-4 w-4" />
+          Add
+        </Button>
+      </CardHeader>
         <CardContent className="font-aptos">
           {localModules.length === 0 ? (
             <div className="flex h-40 flex-col items-center justify-center rounded-md border border-dashed p-4 text-center">
@@ -244,7 +248,7 @@ export function ModuleOverview({ modules, events, onEventClick, userId }: Module
 
                 return (
                   <Collapsible key={module.id} className="rounded-md border">
-                    <CollapsibleTrigger className="flex w-full items-center justify-between p-3 text-left hover:bg-muted/50">
+                    <CollapsibleTrigger className="flex w-full flex-col items-start justify-between p-3 text-left hover:bg-muted/50">
                       <div>
                         <div className="font-medium">{module.name}</div>
                         <div className="text-xs text-muted-foreground">{module.code}</div>
