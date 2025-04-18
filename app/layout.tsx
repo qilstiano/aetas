@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "aetas",
   description: "A personal calendar application for students and young professionals",
   icons: {
-    icon: "https://img.icons8.com/?size=100&id=YiJEuvoVyc0A&format=png&color=000000",
+    icon: "/icons8-a-52.png",
   },
     generator: 'v0.dev'
 }
