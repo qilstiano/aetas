@@ -66,7 +66,7 @@ export default function SignupPage() {
 
         toast({
           title: "Account created",
-          description: "Welcome to inaros! Your account has been created successfully.",
+          description: "Welcome to aetas! Your account has been created successfully.",
         })
 
         router.push("/dashboard")
@@ -88,7 +88,7 @@ export default function SignupPage() {
       <MetallicGradient />
       <Card className="w-full max-w-md bg-background/80 backdrop-blur-sm">
         <CardHeader className="space-y-1">
-          <CardTitle className="app-title text-3xl font-bold tracking-tight metallic-text">inaros</CardTitle>
+          <CardTitle className="app-title text-3xl font-bold tracking-tight metallic-text">aetas</CardTitle>
           <CardDescription>Enter your information to create an account</CardDescription>
         </CardHeader>
         <form onSubmit={handleSignup}>

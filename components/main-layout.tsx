@@ -78,7 +78,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
       >
         <div className="flex h-full flex-col">
           <div className="flex h-16 shrink-0 items-center border-b px-4">
-            <h1 className="font-ibm-plex-mono text-xl font-semibold">{isSidebarCollapsed ? "i" : "inaros"}</h1>
+            <h1 className="font-ibm-plex-mono text-xl font-semibold">{isSidebarCollapsed ? "a" : "aetas"}</h1>
           </div>
 
           <nav className="flex flex-1 flex-col py-4">
@@ -141,7 +141,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
             </SheetTrigger>
             <SheetContent side="left" className="flex w-[250px] flex-col p-0">
               <div className="flex h-16 shrink-0 items-center border-b px-4">
-                <h1 className="font-ibm-plex-mono text-xl font-semibold">inaros</h1>
+                <h1 className="font-ibm-plex-mono text-xl font-semibold">aetas</h1>
               </div>
               <nav className="flex flex-1 flex-col py-4">
                 <ul className="flex flex-1 flex-col gap-1">
@@ -179,7 +179,7 @@ export function MainLayout({ children, user }: MainLayoutProps) {
               </nav>
             </SheetContent>
           </Sheet>
-          <h1 className="font-ibm-plex-mono text-xl font-semibold">inaros</h1>
+          <h1 className="font-ibm-plex-mono text-xl font-semibold">aetas</h1>
         </header>
         {children}
       </div>
