@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { createServerComponentClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
 import { CalendarDashboard } from "@/components/calendar-dashboard"
+import { MainLayout } from "@/components/main-layout"
 
 export default async function DashboardPage() {
-  const supabase = createClient()
-
+  const supabase = createServerComponentClient({ cookies })
   const {
     data: { session },
   } = await supabase.auth.getSession()
@@ -13,21 +14,11 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  const { data: userSettings } = await supabase
-    .from("user_settings")
-    .select("*")
-    .eq("user_id", session.user.id)
-    .single()
-
-  // If user settings don't exist, create them
-  if (!userSettings) {
-    await supabase.from("user_settings").insert({
-      user_id: session.user.id,
-      email_notifications: true,
-      push_notifications: true,
-      theme: "system",
-    })
-  }
-
-  return <CalendarDashboard user={session.user} />
+  return (
+    <MainLayout
+      user={{ id: session.user.id, email: session.user.email, full_name: session.user.user_metadata?.full_name }}
+    >
+      <CalendarDashboard user={session.user} />
+    </MainLayout>
+  )
 }

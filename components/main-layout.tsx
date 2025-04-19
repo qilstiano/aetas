@@ -4,12 +4,12 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { Calendar, ChevronLeft, ChevronRight, Home, LogOut, NotebookPen } from "lucide-react"
+import Image from "next/image"
+import { usePathname } from "next/navigation"
+import { Calendar, Home, FileText, ChevronFirst, ChevronLast, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/client"
-import { MetallicGradient } from "@/components/metallic-gradient"
-import { LoadingScreen } from "@/components/loading-screen"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { cn } from "@/lib/utils"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -21,118 +21,171 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, user }: MainLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [isLoading, setIsLoading] = useState(true)
   const pathname = usePathname()
-  const router = useRouter()
-  const supabase = createClient()
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
+  // Load the sidebar state from localStorage on component mount
   useEffect(() => {
-    // Simulate loading for a short time to ensure components are ready
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 500)
-
-    // Safety timeout to prevent infinite loading
-    const safetyTimer = setTimeout(() => {
-      setIsLoading(false)
-    }, 3000) // Force hide after 3 seconds
-
-    return () => {
-      clearTimeout(timer)
-      clearTimeout(safetyTimer)
+    const savedState = localStorage.getItem("sidebar-collapsed")
+    if (savedState !== null) {
+      setIsSidebarCollapsed(savedState === "true")
     }
   }, [])
 
-  const handleSignOut = async () => {
-    setIsLoading(true)
-    try {
-      await supabase.auth.signOut()
-      router.push("/login")
-    } catch (error) {
-      console.error("Error signing out:", error)
-      setIsLoading(false)
-    }
+  // Save sidebar state to localStorage when it changes
+  const toggleSidebar = () => {
+    const newState = !isSidebarCollapsed
+    setIsSidebarCollapsed(newState)
+    localStorage.setItem("sidebar-collapsed", String(newState))
   }
 
+  const navigation = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: Home,
+      current: pathname === "/dashboard",
+    },
+    {
+      name: "Calendar",
+      href: "/calendar",
+      icon: Calendar,
+      current: pathname === "/calendar",
+    },
+    {
+      name: "Notes",
+      href: "/notes",
+      icon: FileText,
+      current: pathname === "/notes" || pathname.startsWith("/notes/"),
+    },
+    {
+      name: "einstein",
+      href: "/einstein",
+      icon: () => <Image src="/einstein-icon.png" alt="" width={24} height={24} className="h-5 w-5 object-contain" />,
+      current: pathname === "/einstein",
+    },
+  ]
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <LoadingScreen isLoading={isLoading} />
-      <MetallicGradient />
-      
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <div
-          className={`fixed inset-y-0 z-50 flex w-64 flex-col border-r bg-background/80 backdrop-blur-md transition-transform duration-300 ${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } md:relative md:translate-x-0`}
-        >
-          <div className="flex h-16 items-center border-b px-6">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <span className="font-ibm-plex-mono text-xl font-bold tracking-tight">aetas</span>
-            </Link>
+    <div className="flex h-svh">
+      {/* Desktop Sidebar */}
+      <aside
+        className={cn(
+          "hidden h-svh border-r bg-background transition-all duration-300 ease-in-out md:block",
+          isSidebarCollapsed ? "w-[70px]" : "w-64",
+        )}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex h-16 shrink-0 items-center border-b px-4">
+            <h1 className="font-ibm-plex-mono text-xl font-semibold">{isSidebarCollapsed ? "i" : "inaros"}</h1>
           </div>
 
-          <div className="flex-1 overflow-auto py-4">
-            <nav className="grid gap-1 px-2">
-              <Link
-                href="/dashboard"
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
-                  pathname === "/dashboard" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <Home className="h-4 w-4" />
-                Dashboard
-              </Link>
-              <Link
-                href="/calendar"
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
-                  pathname === "/calendar" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <Calendar className="h-4 w-4" />
-                Calendar
-              </Link>
-              <Link
-                href="/notes"
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground ${
-                  pathname === "/notes" ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <NotebookPen className="h-4 w-4" />
-                Notes
-              </Link>
-            </nav>
-          </div>
+          <nav className="flex flex-1 flex-col py-4">
+            <ul className="flex flex-1 flex-col gap-1">
+              {navigation.map((item) => {
+                const Icon = item.icon
+                return (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                        item.current ? "bg-primary/10 text-primary" : "hover:bg-muted/80",
+                      )}
+                      title={isSidebarCollapsed ? item.name : undefined}
+                    >
+                      {typeof Icon === "function" ? <Icon /> : <Icon className="h-5 w-5" />}
+                      {!isSidebarCollapsed && <span>{item.name}</span>}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
 
-          <div className="border-t p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-center leading-8">
-                {user.full_name ? user.full_name[0] : user.email[0].toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-medium">{user.full_name || user.email}</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between px-3">
+                <div className={cn("flex items-center gap-3", isSidebarCollapsed && "hidden")}>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    <span className="text-sm font-medium uppercase">
+                      {user?.full_name?.[0] || user?.email[0] || "U"}
+                    </span>
+                  </div>
+                  <div className="truncate">
+                    <p className="text-sm font-medium">{user?.full_name || user?.email}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleSidebar}
+                  className="h-8 w-8"
+                  title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {isSidebarCollapsed ? <ChevronLast className="h-4 w-4" /> : <ChevronFirst className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="w-full" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </Button>
-          </div>
+          </nav>
         </div>
+      </aside>
 
-        {/* Toggle sidebar button */}
-        <button
-          className="fixed bottom-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg md:hidden"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          {sidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
-
-        {/* Main content */}
-        <div className="flex-1">{children}</div>
+      {/* Mobile Menu */}
+      <div className="flex w-full flex-col md:hidden">
+        <header className="flex h-16 items-center border-b px-4">
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="mr-2">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="flex w-[250px] flex-col p-0">
+              <div className="flex h-16 shrink-0 items-center border-b px-4">
+                <h1 className="font-ibm-plex-mono text-xl font-semibold">inaros</h1>
+              </div>
+              <nav className="flex flex-1 flex-col py-4">
+                <ul className="flex flex-1 flex-col gap-1">
+                  {navigation.map((item) => {
+                    const Icon = item.icon
+                    return (
+                      <li key={item.name}>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                            item.current ? "bg-primary/10 text-primary" : "hover:bg-muted/80",
+                          )}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          {typeof Icon === "function" ? <Icon /> : <Icon className="h-5 w-5" />}
+                          <span>{item.name}</span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+                <div className="border-t pt-4">
+                  <div className="flex items-center px-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                      <span className="text-sm font-medium uppercase">
+                        {user?.full_name?.[0] || user?.email[0] || "U"}
+                      </span>
+                    </div>
+                    <div className="ml-3 truncate">
+                      <p className="text-sm font-medium">{user?.full_name || user?.email}</p>
+                    </div>
+                  </div>
+                </div>
+              </nav>
+            </SheetContent>
+          </Sheet>
+          <h1 className="font-ibm-plex-mono text-xl font-semibold">inaros</h1>
+        </header>
+        {children}
       </div>
+
+      {/* Main Content (Desktop) */}
+      <main className="hidden w-full md:block">{children}</main>
     </div>
   )
 }

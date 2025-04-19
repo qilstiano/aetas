@@ -16,7 +16,6 @@ import { CalendarDays, ListTodo, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/lib/supabase/client"
-import { MainLayout } from "@/components/main-layout"
 import { CalendarView } from "@/components/calendar-view"
 import { ListView } from "@/components/list-view"
 import { ModuleOverview } from "@/components/module-overview"
@@ -439,68 +438,66 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
   })
 
   return (
-    <MainLayout user={{ id: user.id, email: user.email, full_name: user.user_metadata?.full_name }}>
-      <div className="container py-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {view === "calendar" ? format(selectedDate, "MMMM d, yyyy") : "Upcoming Events"}
-          </h1>
+    <div className="container py-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">
+          {view === "calendar" ? format(selectedDate, "MMMM d, yyyy") : "Upcoming Events"}
+        </h1>
 
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-md border">
-              <Button
-                variant={view === "calendar" ? "default" : "ghost"}
-                size="sm"
-                className="rounded-r-none"
-                onClick={() => setView("calendar")}
-              >
-                <CalendarDays className="mr-2 h-4 w-4" />
-                Calendar
-              </Button>
-              <Button
-                variant={view === "list" ? "default" : "ghost"}
-                size="sm"
-                className="rounded-l-none"
-                onClick={() => setView("list")}
-              >
-                <ListTodo className="mr-2 h-4 w-4" />
-                List
-              </Button>
-            </div>
-
-            <Button onClick={handleNewEvent}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Event
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border">
+            <Button
+              variant={view === "calendar" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-r-none"
+              onClick={() => setView("calendar")}
+            >
+              <CalendarDays className="mr-2 h-4 w-4" />
+              Calendar
+            </Button>
+            <Button
+              variant={view === "list" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-l-none"
+              onClick={() => setView("list")}
+            >
+              <ListTodo className="mr-2 h-4 w-4" />
+              List
             </Button>
           </div>
+
+          <Button onClick={handleNewEvent}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Event
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
+        <div className="md:col-span-2 lg:col-span-3">
+          {view === "calendar" ? (
+            <CalendarView
+              events={filteredEvents}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              onEventClick={handleEditEvent}
+              onToggleComplete={handleToggleComplete}
+              modules={modules}
+              isLoading={isLoading}
+            />
+          ) : (
+            <ListView
+              events={expandedEvents}
+              onEventClick={handleEditEvent}
+              onToggleComplete={handleToggleComplete}
+              modules={modules}
+              isLoading={isLoading}
+            />
+          )}
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4">
-          <div className="md:col-span-2 lg:col-span-3">
-            {view === "calendar" ? (
-              <CalendarView
-                events={filteredEvents}
-                selectedDate={selectedDate}
-                onDateSelect={setSelectedDate}
-                onEventClick={handleEditEvent}
-                onToggleComplete={handleToggleComplete}
-                modules={modules}
-                isLoading={isLoading}
-              />
-            ) : (
-              <ListView
-                events={expandedEvents}
-                onEventClick={handleEditEvent}
-                onToggleComplete={handleToggleComplete}
-                modules={modules}
-                isLoading={isLoading}
-              />
-            )}
-          </div>
-
-          <div>
-            <ModuleOverview modules={modules} events={expandedEvents} onEventClick={handleEditEvent} userId={user.id} />
-          </div>
+        <div>
+          <ModuleOverview modules={modules} events={expandedEvents} onEventClick={handleEditEvent} userId={user.id} />
         </div>
       </div>
 
@@ -513,6 +510,6 @@ export function CalendarDashboard({ user }: CalendarDashboardProps) {
         onUpdate={handleUpdateEvent}
         onDelete={handleDeleteEvent}
       />
-    </MainLayout>
+    </div>
   )
 }

@@ -3,12 +3,30 @@
 import type React from "react"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { ArrowLeft, Save, Trash } from "lucide-react"
+import {
+  ArrowLeft,
+  Save,
+  Trash,
+  Bold,
+  Italic,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  LinkIcon,
+  ImageIcon,
+  Code,
+  Eye,
+  Edit,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import ReactMarkdown from "react-markdown"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts"
 import type { Module } from "@/types/calendar"
 
 interface Note {
@@ -45,6 +64,8 @@ export function NoteEditor({ note, modules, onSave, onDelete, onCancel }: NoteEd
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [viewMode, setViewMode] = useState<"edit" | "preview" | "split">("split")
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const initialRenderRef = useRef(true)
   const lastSavedTitleRef = useRef(note?.title || "")
   const lastSavedContentRef = useRef(note?.content || "")
@@ -190,6 +211,39 @@ export function NoteEditor({ note, modules, onSave, onDelete, onCancel }: NoteEd
     }
   }
 
+  // Insert markdown formatting at cursor position
+  const insertFormatting = (before: string, after = "") => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = content.substring(start, end)
+    const newContent = content.substring(0, start) + before + selectedText + after + content.substring(end)
+
+    setContent(newContent)
+
+    // Focus back on textarea and set cursor position after formatting
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(start + before.length, start + before.length + selectedText.length)
+    }, 0)
+  }
+
+  // Insert AI generated content
+
+  // Markdown formatting handlers
+  const handleBold = () => insertFormatting("**", "**")
+  const handleItalic = () => insertFormatting("*", "*")
+  const handleH1 = () => insertFormatting("# ")
+  const handleH2 = () => insertFormatting("## ")
+  const handleH3 = () => insertFormatting("### ")
+  const handleUnorderedList = () => insertFormatting("- ")
+  const handleOrderedList = () => insertFormatting("1. ")
+  const handleLink = () => insertFormatting("[", "](url)")
+  const handleImage = () => insertFormatting("![alt text](", ")")
+  const handleCode = () => insertFormatting("```\n", "\n```")
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b p-4">
@@ -206,6 +260,8 @@ export function NoteEditor({ note, modules, onSave, onDelete, onCancel }: NoteEd
         </div>
         <div className="flex items-center gap-2">
           {hasUnsavedChanges && <span className="text-sm text-yellow-500 hidden sm:inline">Unsaved changes</span>}
+          <KeyboardShortcuts />
+
           <Button
             variant="outline"
             size="sm"
@@ -234,28 +290,116 @@ export function NoteEditor({ note, modules, onSave, onDelete, onCancel }: NoteEd
       </div>
 
       <div className="border-b p-4">
-        <Select value={moduleId || "none"} onValueChange={handleModuleChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Select module" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No Module</SelectItem>
-            {modules.map((module) => (
-              <SelectItem key={module.id} value={module.id}>
-                {module.code} - {module.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <Select value={moduleId || "none"} onValueChange={handleModuleChange}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Select module" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Module</SelectItem>
+              {modules.map((module) => (
+                <SelectItem key={module.id} value={module.id}>
+                  {module.code} - {module.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex">
+            <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "edit" | "preview" | "split")}>
+              <TabsList>
+                <TabsTrigger value="edit" className="flex items-center gap-1">
+                  <Edit className="h-3 w-3" />
+                  <span className="hidden sm:inline">Edit</span>
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="flex items-center gap-1">
+                  <Eye className="h-3 w-3" />
+                  <span className="hidden sm:inline">Preview</span>
+                </TabsTrigger>
+                <TabsTrigger value="split" className="flex items-center gap-1">
+                  <div className="flex h-3 w-3 items-center justify-center">
+                    <div className="h-3 w-1.5 border-l border-r"></div>
+                  </div>
+                  <span className="hidden sm:inline">Split</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4">
-        <Textarea
-          value={content}
-          onChange={handleContentChange}
-          className="min-h-[calc(100vh-12rem)] w-full resize-none border-0 p-0 focus-visible:ring-0"
-          placeholder="Start writing..."
-        />
+      <div className="border-b p-2 flex flex-wrap gap-1">
+        <Button variant="ghost" size="icon" onClick={handleBold} title="Bold">
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleItalic} title="Italic">
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleH1} title="Heading 1">
+          <Heading1 className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleH2} title="Heading 2">
+          <Heading2 className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleH3} title="Heading 3">
+          <Heading3 className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleUnorderedList} title="Bullet List">
+          <List className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleOrderedList} title="Numbered List">
+          <ListOrdered className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleLink} title="Link">
+          <LinkIcon className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleImage} title="Image">
+          <ImageIcon className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={handleCode} title="Code Block">
+          <Code className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {viewMode === "edit" && (
+          <div className="h-full p-4">
+            <Textarea
+              ref={textareaRef}
+              value={content}
+              onChange={handleContentChange}
+              className="min-h-[calc(100vh-16rem)] w-full resize-none border-0 p-0 focus-visible:ring-0 font-mono"
+              placeholder="Start writing..."
+            />
+          </div>
+        )}
+
+        {viewMode === "preview" && (
+          <div className="h-full p-4 overflow-auto">
+            <div className="prose dark:prose-invert max-w-none">
+              <ReactMarkdown>{content || "Nothing to preview"}</ReactMarkdown>
+            </div>
+          </div>
+        )}
+
+        {viewMode === "split" && (
+          <div className="grid h-full grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x">
+            <div className="p-4 overflow-auto">
+              <Textarea
+                ref={textareaRef}
+                value={content}
+                onChange={handleContentChange}
+                className="min-h-[calc(100vh-16rem)] w-full resize-none border-0 p-0 focus-visible:ring-0 font-mono"
+                placeholder="Start writing..."
+              />
+            </div>
+            <div className="p-4 overflow-auto">
+              <div className="prose dark:prose-invert max-w-none">
+                <ReactMarkdown>{content || "Nothing to preview"}</ReactMarkdown>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {note && note.id === "new" && (

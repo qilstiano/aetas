@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "aetas",
   description: "A personal calendar application for students and young professionals",
   icons: {
-    icon: "/icons8-a-52.png"
+    icon: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/icons8-a-52-SEgUHL5oJAvtj6pe6Un2f3JbhC4V4p.png",
   },
     generator: 'v0.dev'
 }

@@ -50,6 +50,8 @@ export function NotesPage({ user }: NotesPageProps) {
   const [newModuleCode, setNewModuleCode] = useState("")
   const [newModuleColor, setNewModuleColor] = useState("#3b82f6")
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([])
   const supabase = createClient()
 
   // Fetch notes function - extracted to be reused in real-time subscription
@@ -80,6 +82,7 @@ export function NotesPage({ user }: NotesPageProps) {
       }))
 
       setNotes(formattedNotes)
+      setFilteredNotes(formattedNotes)
 
       return formattedNotes
     } catch (error) {
@@ -92,7 +95,7 @@ export function NotesPage({ user }: NotesPageProps) {
       })
       return []
     }
-  }, [user.id, supabase, toast]) // Remove selectedNote from dependencies
+  }, [user.id, supabase, toast])
 
   // Fetch modules function - extracted to be reused in real-time subscription
   const fetchModules = useCallback(async () => {
@@ -183,6 +186,20 @@ export function NotesPage({ user }: NotesPageProps) {
       modulesSubscription.unsubscribe()
     }
   }, [user.id, fetchNotes, fetchModules, noteId])
+
+  // Filter notes based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredNotes(notes)
+      return
+    }
+
+    const query = searchQuery.toLowerCase()
+    const filtered = notes.filter(
+      (note) => note.title.toLowerCase().includes(query) || note.content.toLowerCase().includes(query),
+    )
+    setFilteredNotes(filtered)
+  }, [notes, searchQuery])
 
   const handleModuleSelect = (moduleId: string) => {
     setSelectedModule(moduleId)
@@ -383,6 +400,15 @@ export function NotesPage({ user }: NotesPageProps) {
             </div>
           </div>
 
+          <div className="p-4 border-b">
+            <Input
+              placeholder="Search notes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
           {isCreatingModule && (
             <div className="border-b p-4">
               <div className="space-y-2">
@@ -438,10 +464,10 @@ export function NotesPage({ user }: NotesPageProps) {
                         Array.from({ length: 3 }).map((_, i) => (
                           <Skeleton key={i} className="mx-4 h-6 w-[calc(100%-2rem)]" />
                         ))
-                      ) : notes.filter((note) => note.moduleId === module.id).length === 0 ? (
+                      ) : filteredNotes.filter((note) => note.moduleId === module.id).length === 0 ? (
                         <div className="px-4 py-2 text-sm text-muted-foreground">No notes</div>
                       ) : (
-                        notes
+                        filteredNotes
                           .filter((note) => note.moduleId === module.id)
                           .map((note) => (
                             <button
