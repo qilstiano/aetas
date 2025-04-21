@@ -1,6 +1,17 @@
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/lib/database.types"
 
+// Create a singleton instance to prevent multiple instances
+let supabaseClient: ReturnType<typeof createClientComponentClient<Database>> | null = null
+
 export const createClient = () => {
-  return createClientComponentClient<Database>()
+  if (!supabaseClient) {
+    supabaseClient = createClientComponentClient<Database>({
+      options: {
+        autoRefreshToken: true,
+        persistSession: true,
+      },
+    })
+  }
+  return supabaseClient
 }

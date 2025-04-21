@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { GeistSans } from "geist/font/sans"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/components/auth-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -29,7 +30,7 @@ export default function RootLayout({
       </head>
       <body className={`${GeistSans.className} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-          {children}
+          <AuthProvider>{children}</AuthProvider>
           <Toaster />
         </ThemeProvider>
       </body>

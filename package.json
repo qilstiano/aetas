@@ -62,8 +62,8 @@
     "firebase": "latest",
     "@supabase/auth-helpers-nextjs": "latest",
     "@tailwindcss/typography": "latest",
-    "geist": "latest",
-    "react-markdown": "latest"
+    "react-markdown": "latest",
+    "geist": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

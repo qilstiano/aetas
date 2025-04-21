@@ -22,14 +22,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/lib/supabase/client"
-import { MainLayout } from "@/components/main-layout"
 import { EventDialog } from "@/components/event-dialog"
 import type { Event, Module } from "@/types/calendar"
 
 interface CalendarPageProps {
   user: {
     id: string
-    email: string
+    email?: string
     user_metadata?: {
       full_name?: string
     }
@@ -432,53 +431,49 @@ export function CalendarPage({ user }: CalendarPageProps) {
   }
 
   return (
-    <MainLayout user={{ id: user.id, email: user.email, full_name: user.user_metadata?.full_name }}>
-      <div className="container py-6">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">
-            {view === "month"
-              ? format(currentDate, "MMMM yyyy")
-              : `Week of ${format(startOfWeek(currentDate), "MMM d")}`}
-          </h1>
+    <div className="container py-6">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold tracking-tight">
+          {view === "month" ? format(currentDate, "MMMM yyyy") : `Week of ${format(startOfWeek(currentDate), "MMM d")}`}
+        </h1>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleToday}>
-              Today
-            </Button>
-            <Button variant="outline" size="icon" onClick={handlePrevious}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={handleNext}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week")}>
-              <TabsList>
-                <TabsTrigger value="month">Month</TabsTrigger>
-                <TabsTrigger value="week">Week</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button onClick={() => handleNewEvent()}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Event
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleToday}>
+            Today
+          </Button>
+          <Button variant="outline" size="icon" onClick={handlePrevious}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={handleNext}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Tabs value={view} onValueChange={(v) => setView(v as "month" | "week")}>
+            <TabsList>
+              <TabsTrigger value="month">Month</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button onClick={() => handleNewEvent()}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Event
+          </Button>
         </div>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Calendar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center h-[600px]">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-              </div>
-            ) : (
-              <div>{view === "month" ? renderMonthView() : renderWeekView()}</div>
-            )}
-          </CardContent>
-        </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle>Calendar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-[600px]">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            </div>
+          ) : (
+            <div>{view === "month" ? renderMonthView() : renderWeekView()}</div>
+          )}
+        </CardContent>
+      </Card>
 
       <EventDialog
         isOpen={isDialogOpen}
@@ -490,6 +485,6 @@ export function CalendarPage({ user }: CalendarPageProps) {
         onDelete={handleDeleteEvent}
         initialDate={selectedEvent?.start || currentDate}
       />
-    </MainLayout>
+    </div>
   )
 }

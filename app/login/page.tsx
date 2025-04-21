@@ -28,6 +28,10 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      // Clear any existing sessions first to prevent token conflicts
+      await supabase.auth.signOut()
+
+      // Sign in with new credentials
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -37,15 +41,26 @@ export default function LoginPage() {
 
       toast({
         title: "Login successful",
-        description: "Welcome back to inaros!",
+        description: "Welcome back to aetas!",
       })
 
       router.push("/dashboard")
       router.refresh()
     } catch (error: any) {
+      let errorMessage = error.message || "Please check your credentials and try again"
+
+      // Handle specific error cases
+      if (
+        error?.name === "AuthApiError" &&
+        error?.status === 400 &&
+        (error?.message?.includes("refresh_token") || error?.code === "refresh_token_already_used")
+      ) {
+        errorMessage = "Session error. Please try logging in again."
+      }
+
       toast({
         title: "Login failed",
-        description: error.message || "Please check your credentials and try again",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {

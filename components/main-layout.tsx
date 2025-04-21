@@ -5,187 +5,145 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
-import { Calendar, Home, FileText, ChevronFirst, ChevronLast, Menu } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { Calendar, FileText, Home, LogOut } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useToast } from "@/components/ui/use-toast"
 
 interface MainLayoutProps {
   children: React.ReactNode
-  user: {
-    id: string
-    email: string
-    full_name?: string
-  }
 }
 
-export function MainLayout({ children, user }: MainLayoutProps) {
+export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname()
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { user, loading, signOut } = useAuth()
+  const router = useRouter()
+  const { toast } = useToast()
+  const [initials, setInitials] = useState("...")
 
-  // Load the sidebar state from localStorage on component mount
   useEffect(() => {
-    const savedState = localStorage.getItem("sidebar-collapsed")
-    if (savedState !== null) {
-      setIsSidebarCollapsed(savedState === "true")
+    if (user?.user_metadata?.full_name) {
+      const nameParts = user.user_metadata.full_name.split(" ")
+      const firstInitial = nameParts[0] ? nameParts[0][0] : ""
+      const lastInitial = nameParts[1] ? nameParts[1][0] : ""
+      setInitials((firstInitial + lastInitial).toUpperCase())
+    } else if (user?.email) {
+      setInitials(user.email[0].toUpperCase())
     }
-  }, [])
+  }, [user])
 
-  // Save sidebar state to localStorage when it changes
-  const toggleSidebar = () => {
-    const newState = !isSidebarCollapsed
-    setIsSidebarCollapsed(newState)
-    localStorage.setItem("sidebar-collapsed", String(newState))
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account",
+      })
+    } catch (error) {
+      console.error("Error signing out:", error)
+      toast({
+        title: "Error signing out",
+        description: "There was a problem signing out. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  const navigation = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: Home,
-      current: pathname === "/dashboard",
-    },
-    {
-      name: "Calendar",
-      href: "/calendar",
-      icon: Calendar,
-      current: pathname === "/calendar",
-    },
-    {
-      name: "Notes",
-      href: "/notes",
-      icon: FileText,
-      current: pathname === "/notes" || pathname.startsWith("/notes/"),
-    },
-    {
-      name: "einstein",
-      href: "/einstein",
-      icon: () => <Image src="/einstein-icon.png" alt="" width={24} height={24} className="h-5 w-5 object-contain" />,
-      current: pathname === "/einstein",
-    },
-  ]
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#0e0014]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-lg font-medium text-primary">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex h-svh">
-      {/* Desktop Sidebar */}
-      <aside
-        className={cn(
-          "hidden h-svh border-r bg-background transition-all duration-300 ease-in-out md:block",
-          isSidebarCollapsed ? "w-[70px]" : "w-64",
-        )}
-      >
-        <div className="flex h-full flex-col">
-          <div className="flex h-16 shrink-0 items-center border-b px-4">
-            <h1 className="font-ibm-plex-mono text-xl font-semibold">{isSidebarCollapsed ? "a" : "aetas"}</h1>
-          </div>
-
-          <nav className="flex flex-1 flex-col py-4">
-            <ul className="flex flex-1 flex-col gap-1">
-              {navigation.map((item) => {
-                const Icon = item.icon
-                return (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                        item.current ? "bg-primary/10 text-primary" : "hover:bg-muted/80",
-                      )}
-                      title={isSidebarCollapsed ? item.name : undefined}
-                    >
-                      {typeof Icon === "function" ? <Icon /> : <Icon className="h-5 w-5" />}
-                      {!isSidebarCollapsed && <span>{item.name}</span>}
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between px-3">
-                <div className={cn("flex items-center gap-3", isSidebarCollapsed && "hidden")}>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                    <span className="text-sm font-medium uppercase">
-                      {user?.full_name?.[0] || user?.email[0] || "U"}
-                    </span>
-                  </div>
-                  <div className="truncate">
-                    <p className="text-sm font-medium">{user?.full_name || user?.email}</p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleSidebar}
-                  className="h-8 w-8"
-                  title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                >
-                  {isSidebarCollapsed ? <ChevronLast className="h-4 w-4" /> : <ChevronFirst className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          </nav>
+    <div className="flex h-screen bg-[#0e0014]">
+      {/* Sidebar */}
+      <div className="flex w-20 flex-col items-center border-r border-purple-900/20 bg-black/40">
+        {/* Logo */}
+        <div className="flex h-20 w-full items-center justify-center border-b border-purple-900/20">
+          <h1 className="app-title text-2xl font-bold tracking-tight text-white">a</h1>
         </div>
-      </aside>
 
-      {/* Mobile Menu */}
-      <div className="flex w-full flex-col md:hidden">
-        <header className="flex h-16 items-center border-b px-4">
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex w-[250px] flex-col p-0">
-              <div className="flex h-16 shrink-0 items-center border-b px-4">
-                <h1 className="font-ibm-plex-mono text-xl font-semibold">aetas</h1>
+        {/* Navigation */}
+        <div className="flex flex-1 flex-col items-center gap-4 py-8">
+          <Link href="/dashboard">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-10 w-10 rounded-lg ${
+                pathname === "/dashboard" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <Home className="h-5 w-5" />
+              <span className="sr-only">Dashboard</span>
+            </Button>
+          </Link>
+          <Link href="/calendar">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-10 w-10 rounded-lg ${
+                pathname === "/calendar" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <Calendar className="h-5 w-5" />
+              <span className="sr-only">Calendar</span>
+            </Button>
+          </Link>
+          <Link href="/notes">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-10 w-10 rounded-lg ${
+                pathname === "/notes" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <FileText className="h-5 w-5" />
+              <span className="sr-only">Notes</span>
+            </Button>
+          </Link>
+          <Link href="/einstein">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-10 w-10 rounded-lg ${
+                pathname === "/einstein" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              <div className="relative h-5 w-5">
+                <Image src="/einstein-icon.png" alt="einstein" fill className="object-contain" />
               </div>
-              <nav className="flex flex-1 flex-col py-4">
-                <ul className="flex flex-1 flex-col gap-1">
-                  {navigation.map((item) => {
-                    const Icon = item.icon
-                    return (
-                      <li key={item.name}>
-                        <Link
-                          href={item.href}
-                          className={cn(
-                            "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                            item.current ? "bg-primary/10 text-primary" : "hover:bg-muted/80",
-                          )}
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          {typeof Icon === "function" ? <Icon /> : <Icon className="h-5 w-5" />}
-                          <span>{item.name}</span>
-                        </Link>
-                      </li>
-                    )
-                  })}
-                </ul>
-                <div className="border-t pt-4">
-                  <div className="flex items-center px-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                      <span className="text-sm font-medium uppercase">
-                        {user?.full_name?.[0] || user?.email[0] || "U"}
-                      </span>
-                    </div>
-                    <div className="ml-3 truncate">
-                      <p className="text-sm font-medium">{user?.full_name || user?.email}</p>
-                    </div>
-                  </div>
-                </div>
-              </nav>
-            </SheetContent>
-          </Sheet>
-          <h1 className="font-ibm-plex-mono text-xl font-semibold">aetas</h1>
-        </header>
-        {children}
+              <span className="sr-only">einstein</span>
+            </Button>
+          </Link>
+        </div>
+
+        {/* User Profile */}
+        <div className="flex w-full flex-col items-center gap-2 border-t border-purple-900/20 py-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600 text-sm font-medium text-white">
+            {loading ? <Skeleton className="h-full w-full rounded-full" /> : initials}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 rounded-lg text-gray-400 hover:text-white"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="sr-only">Sign out</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Main Content (Desktop) */}
-      <main className="hidden w-full md:block">{children}</main>
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col overflow-hidden">{children}</div>
     </div>
   )
 }

@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
 import { createClient } from "@/lib/supabase/client"
-import { MainLayout } from "@/components/main-layout"
 import { NoteEditor } from "@/components/note-editor"
 import { LoadingScreen } from "@/components/loading-screen"
 import type { Module } from "@/types/calendar"
@@ -24,16 +23,10 @@ interface Note {
 }
 
 interface NotesPageProps {
-  user: {
-    id: string
-    email: string
-    user_metadata?: {
-      full_name?: string
-    }
-  }
+  userId: string
 }
 
-export function NotesPage({ user }: NotesPageProps) {
+export function NotesPage({ userId }: NotesPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const moduleId = searchParams.get("moduleId")
@@ -67,7 +60,7 @@ export function NotesPage({ user }: NotesPageProps) {
       const { data: notesData, error: notesError } = await supabase
         .from("notes")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("updated_at", { ascending: false })
 
       if (notesError) throw notesError
@@ -95,7 +88,7 @@ export function NotesPage({ user }: NotesPageProps) {
       })
       return []
     }
-  }, [user.id, supabase, toast])
+  }, [userId, supabase, toast])
 
   // Fetch modules function - extracted to be reused in real-time subscription
   const fetchModules = useCallback(async () => {
@@ -108,7 +101,7 @@ export function NotesPage({ user }: NotesPageProps) {
       const { data: modulesData, error: modulesError } = await supabase
         .from("modules")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("name", { ascending: true })
 
       if (modulesError) throw modulesError
@@ -133,7 +126,7 @@ export function NotesPage({ user }: NotesPageProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [user.id, supabase, toast])
+  }, [userId, supabase, toast])
 
   useEffect(() => {
     // Initial data fetch
@@ -165,7 +158,7 @@ export function NotesPage({ user }: NotesPageProps) {
     // Set up real-time subscriptions
     const notesSubscription = supabase
       .channel("notes-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notes", filter: `user_id=eq.${user.id}` }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "notes", filter: `user_id=eq.${userId}` }, () => {
         fetchNotes()
       })
       .subscribe()
@@ -174,7 +167,7 @@ export function NotesPage({ user }: NotesPageProps) {
       .channel("modules-changes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "modules", filter: `user_id=eq.${user.id}` },
+        { event: "*", schema: "public", table: "modules", filter: `user_id=eq.${userId}` },
         () => {
           fetchModules()
         },
@@ -185,7 +178,7 @@ export function NotesPage({ user }: NotesPageProps) {
       notesSubscription.unsubscribe()
       modulesSubscription.unsubscribe()
     }
-  }, [user.id, fetchNotes, fetchModules, noteId])
+  }, [userId, fetchNotes, fetchModules, noteId])
 
   // Filter notes based on search query
   useEffect(() => {
@@ -222,7 +215,7 @@ export function NotesPage({ user }: NotesPageProps) {
           name: newModuleName.trim(),
           code: newModuleCode.trim(),
           color: newModuleColor,
-          user_id: user.id,
+          user_id: userId,
         })
         .select()
 
@@ -260,7 +253,7 @@ export function NotesPage({ user }: NotesPageProps) {
       const { data, error } = await supabase
         .from("notes")
         .insert({
-          user_id: user.id,
+          user_id: userId,
           title: trimmedTitle,
           content: note.content || "",
           module_id: note.moduleId,
@@ -380,7 +373,7 @@ export function NotesPage({ user }: NotesPageProps) {
   }, [fetchError, fetchNotes])
 
   return (
-    <MainLayout user={{ id: user.id, email: user.email, full_name: user.user_metadata?.full_name }}>
+    <div className="flex h-full flex-col">
       <LoadingScreen isLoading={isPageLoading} />
 
       <div className="flex h-[calc(100vh-4rem)] flex-col md:flex-row">
@@ -559,6 +552,6 @@ export function NotesPage({ user }: NotesPageProps) {
           )}
         </div>
       </div>
-    </MainLayout>
+    </div>
   )
 }
