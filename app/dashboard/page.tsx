@@ -80,6 +80,9 @@ export default function DashboardPage() {
         <header className="flex items-center justify-between p-6">
           <h1 className="text-4xl font-bold text-white">{format(currentDate, "MMMM d, yyyy")}</h1>
           <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
+              Today
+            </Button>
             <div className="flex overflow-hidden rounded-lg border border-purple-900/30 bg-black/20">
               <Button
                 variant="ghost"

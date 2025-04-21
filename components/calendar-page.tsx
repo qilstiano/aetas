@@ -267,11 +267,13 @@ export function CalendarPage({ user }: CalendarPageProps) {
     setCurrentDate(new Date())
   }
 
+  // Update the renderMonthView function to highlight the current week and today's date
   const renderMonthView = () => {
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(monthStart)
     const startDate = startOfWeek(monthStart)
     const endDate = endOfWeek(monthEnd)
+    const today = new Date()
 
     const dateFormat = "d"
     const rows = []
@@ -287,11 +289,17 @@ export function CalendarPage({ user }: CalendarPageProps) {
       </div>
     ))
 
+    // Determine the start and end of the current week
+    const currentWeekStart = startOfWeek(today)
+    const currentWeekEnd = endOfWeek(today)
+
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
         formattedDate = format(day, dateFormat)
         const cloneDay = day
         const dayEvents = events.filter((event) => isSameDay(event.start, cloneDay))
+        const isToday = isSameDay(day, today)
+        const isCurrentWeek = day >= currentWeekStart && day <= currentWeekEnd
 
         days.push(
           <div
@@ -299,14 +307,22 @@ export function CalendarPage({ user }: CalendarPageProps) {
             className={`calendar-day border ${
               !isSameMonth(day, monthStart)
                 ? "text-muted-foreground bg-muted/30"
-                : isSameDay(day, new Date())
+                : isToday
                   ? "bg-primary/10 border-primary"
                   : ""
-            }`}
+            } ${isCurrentWeek ? "border-purple-500/50" : ""}`}
             onClick={() => handleNewEvent(cloneDay)}
           >
             <div className="calendar-day-header">
-              <span className="text-sm">{formattedDate}</span>
+              <span
+                className={`text-sm ${
+                  isToday
+                    ? "h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+                    : ""
+                }`}
+              >
+                {formattedDate}
+              </span>
             </div>
             <div className="calendar-day-events">
               {dayEvents.slice(0, 3).map((event) => (
@@ -340,14 +356,16 @@ export function CalendarPage({ user }: CalendarPageProps) {
     return (
       <div>
         <div className="calendar-grid mb-1">{daysHeader}</div>
-        {rows}
+        <div className="max-h-[calc(100vh-250px)] overflow-y-auto">{rows}</div>
       </div>
     )
   }
 
+  // Update the renderWeekView function to add a max height and overflow
   const renderWeekView = () => {
     const weekStart = startOfWeek(currentDate)
     const weekEnd = endOfWeek(weekStart)
+    const today = new Date()
 
     const daysOfWeek = []
     let day = weekStart
@@ -359,14 +377,23 @@ export function CalendarPage({ user }: CalendarPageProps) {
     }
 
     // Days of week header
-    const daysHeader = daysOfWeek.map((day) => (
-      <div key={day.toString()} className="text-center font-medium py-2">
-        <div>{format(day, "EEE")}</div>
-        <div className={`text-sm ${isSameDay(day, new Date()) ? "text-primary font-bold" : ""}`}>
-          {format(day, "d")}
+    const daysHeader = daysOfWeek.map((day) => {
+      const isToday = isSameDay(day, today)
+      return (
+        <div key={day.toString()} className="text-center font-medium py-2">
+          <div>{format(day, "EEE")}</div>
+          <div
+            className={`text-sm ${
+              isToday
+                ? "h-7 w-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground mx-auto"
+                : ""
+            }`}
+          >
+            {format(day, "d")}
+          </div>
         </div>
-      </div>
-    ))
+      )
+    })
 
     // Hours grid
     const hours = Array.from({ length: 24 }, (_, i) => i)
@@ -374,7 +401,7 @@ export function CalendarPage({ user }: CalendarPageProps) {
     return (
       <div>
         <div className="calendar-grid mb-1">{daysHeader}</div>
-        <div className="overflow-y-auto max-h-[600px]">
+        <div className="overflow-y-auto max-h-[calc(100vh-250px)]">
           {hours.map((hour) => (
             <div key={hour} className="flex border-t">
               <div className="w-16 py-2 text-xs text-muted-foreground text-right pr-2">
