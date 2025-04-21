@@ -6,12 +6,7 @@ let supabaseClient: ReturnType<typeof createClientComponentClient<Database>> | n
 
 export const createClient = () => {
   if (!supabaseClient) {
-    supabaseClient = createClientComponentClient<Database>({
-      options: {
-        autoRefreshToken: true,
-        persistSession: true,
-      },
-    })
+    supabaseClient = createClientComponentClient<Database>()
   }
   return supabaseClient
 }

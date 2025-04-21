@@ -13,7 +13,7 @@ export async function middleware(req: NextRequest) {
 
     // Public routes that don't require authentication
     const publicRoutes = ["/login", "/signup", "/reset-password"]
-    const isPublicRoute = publicRoutes.includes(req.nextUrl.pathname)
+    const isPublicRoute = publicRoutes.some((route) => req.nextUrl.pathname === route)
 
     // If user is not signed in and trying to access a protected route,
     // redirect to login
@@ -28,20 +28,7 @@ export async function middleware(req: NextRequest) {
     }
 
     return res
-  } catch (error: any) {
-    // Handle refresh token errors by redirecting to login
-    if (error?.name === "AuthApiError" && error?.status === 400 && error?.message?.includes("refresh_token")) {
-      // Clear any existing session cookies
-      const response = NextResponse.redirect(new URL("/login", req.url))
-
-      // Attempt to clear the supabase cookie
-      response.cookies.delete("sb-refresh-token")
-      response.cookies.delete("sb-access-token")
-
-      return response
-    }
-
-    // For other errors, continue but log them
+  } catch (error) {
     console.error("Auth error in middleware:", error)
     return res
   }

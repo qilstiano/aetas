@@ -36,7 +36,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
   }, [user])
 
-  // If not authenticated, redirect to login
+  // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login")
@@ -51,8 +51,6 @@ export function MainLayout({ children }: MainLayoutProps) {
         title: "Signed out successfully",
         description: "You have been signed out of your account",
       })
-      // Redirect to login page
-      router.push("/login")
     } catch (error) {
       console.error("Error signing out:", error)
       toast({

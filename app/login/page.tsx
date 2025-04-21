@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCheckingSession, setIsCheckingSession] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
@@ -26,11 +27,18 @@ export default function LoginPage() {
   // Check if user is already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (session) {
-        router.push("/dashboard")
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (session) {
+          router.push("/dashboard")
+        }
+      } catch (error) {
+        console.error("Error checking session:", error)
+      } finally {
+        setIsCheckingSession(false)
       }
     }
 
@@ -42,34 +50,32 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      // Clear any existing sessions first to prevent token conflicts
-      await supabase.auth.signOut()
-
-      // Sign in with new credentials
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Sign in with credentials
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
       })
 
       if (error) throw error
 
-      toast({
-        title: "Login successful",
-        description: "Welcome back to aetas!",
-      })
+      if (data.session) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back to aetas!",
+        })
 
-      router.push("/dashboard")
-      router.refresh()
+        // Use router for navigation
+        router.push("/dashboard")
+      } else {
+        throw new Error("No session returned")
+      }
     } catch (error: any) {
-      let errorMessage = error.message || "Please check your credentials and try again"
+      console.error("Login error:", error)
 
-      // Handle specific error cases
-      if (
-        error?.name === "AuthApiError" &&
-        error?.status === 400 &&
-        (error?.message?.includes("refresh_token") || error?.code === "refresh_token_already_used")
-      ) {
-        errorMessage = "Session error. Please try logging in again."
+      let errorMessage = "Please check your credentials and try again"
+
+      if (error.message) {
+        errorMessage = error.message
       }
 
       toast({
@@ -80,6 +86,17 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isCheckingSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-lg font-medium text-primary">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
