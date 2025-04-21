@@ -30,9 +30,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut()
       setUser(null)
+      // Force redirect to login page
       router.push("/login")
+      // Refresh to ensure all client-side state is cleared
+      router.refresh()
     } catch (error) {
       console.error("Error signing out:", error)
+      toast({
+        title: "Error signing out",
+        description: "There was a problem signing out. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -43,6 +51,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { session },
         } = await supabase.auth.getSession()
+
+        if (!session) {
+          // If no session, redirect to login
+          router.push("/login")
+        }
+
         setUser(session?.user || null)
 
         // Set up auth state change listener
@@ -51,7 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } = await supabase.auth.onAuthStateChange(async (event, session) => {
           setUser(session?.user || null)
 
-          if (event === "TOKEN_REFRESHED") {
+          if (event === "SIGNED_OUT") {
+            // Redirect to login page on sign out
+            router.push("/login")
+          } else if (event === "TOKEN_REFRESHED") {
             // Handle token refresh success
             console.log("Token refreshed successfully")
           }

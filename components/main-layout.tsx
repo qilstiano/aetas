@@ -11,6 +11,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/components/ui/use-toast"
+import { LoadingScreen } from "@/components/loading-screen"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -22,6 +23,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [initials, setInitials] = useState("...")
+  const [isSigningOut, setIsSigningOut] = useState(false)
 
   useEffect(() => {
     if (user?.user_metadata?.full_name) {
@@ -34,13 +36,23 @@ export function MainLayout({ children }: MainLayoutProps) {
     }
   }, [user])
 
+  // If not authenticated, redirect to login
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login")
+    }
+  }, [loading, user, router])
+
   const handleSignOut = async () => {
     try {
+      setIsSigningOut(true)
       await signOut()
       toast({
         title: "Signed out successfully",
         description: "You have been signed out of your account",
       })
+      // Redirect to login page
+      router.push("/login")
     } catch (error) {
       console.error("Error signing out:", error)
       toast({
@@ -48,10 +60,12 @@ export function MainLayout({ children }: MainLayoutProps) {
         description: "There was a problem signing out. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsSigningOut(false)
     }
   }
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-[#0e0014]">
         <div className="flex flex-col items-center gap-4">
@@ -64,6 +78,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="flex h-screen bg-[#0e0014]">
+      {isSigningOut && <LoadingScreen isLoading={true} />}
       {/* Sidebar */}
       <div className="flex w-20 flex-col items-center border-r border-purple-900/20 bg-black/40">
         {/* Logo */}
@@ -135,6 +150,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             size="icon"
             className="h-10 w-10 rounded-lg text-gray-400 hover:text-white"
             onClick={handleSignOut}
+            disabled={isSigningOut}
           >
             <LogOut className="h-5 w-5" />
             <span className="sr-only">Sign out</span>

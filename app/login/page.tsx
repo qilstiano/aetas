@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, LogIn } from "lucide-react"
@@ -22,6 +22,20 @@ export default function LoginPage() {
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (session) {
+        router.push("/dashboard")
+      }
+    }
+
+    checkSession()
+  }, [router, supabase.auth])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
